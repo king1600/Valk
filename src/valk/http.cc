@@ -119,7 +119,6 @@ void io::HttpParser::Feed(const std::vector<char>& raw) {
     if (!callbacks.empty()) {
       io::HttpCallbackQuery query = std::move(callbacks.back());
       callbacks.pop_back();
-      std::cout << "Got callback" << std::endl;
       query.callback(query.route, resp);
       resp.body.clear();
       resp.headers.clear();

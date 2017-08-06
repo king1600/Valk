@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uri.hh"
+#include "json.hh"
 #include <deque>
 
 namespace io {
@@ -41,8 +42,8 @@ namespace io {
   public:
     HttpParser();
 
-    std::string gzip(const std::string &);
-    std::string gunzip(const std::string &);
+    static std::string gzip(const std::string &);
+    static std::string gunzip(const std::string &);
 
     void onHeader(const HeaderCallback& cb);
     void Feed(const std::vector<char>& data);

@@ -52,6 +52,21 @@ const std::size_t io::RestRoute::hasLeft() const {
   return queued.size();
 }
 
+void io::RestClient::get(const std::string& endpoint,
+  const io::json &data, const io::RestCallback &callback) {
+  Request("GET", endpoint, data, callback);
+}
+
+void io::RestClient::post(const std::string& endpoint,
+  const io::json &data, const io::RestCallback &callback) {
+  Request("POST", endpoint, data, callback);
+}
+
+void io::RestClient::del(const std::string& endpoint,
+  const io::json &data, const io::RestCallback &callback) {
+  Request("DELETE", endpoint, data, callback);
+}
+
 void io::RestClient::_connect() {
   if (client == nullptr)
     client = std::make_shared<io::SSLClient>(service);
@@ -104,7 +119,7 @@ void io::RestClient::Request(const std::string& method,
   request << method << " " << valk::BASE_ENDPOINT << endpoint << " HTTP/1.1\r\n"
       << "Host: " << valk::BASE_HOST << ":443\r\n"
       << "Authorization: Bot " << token << "\r\n"
-      << "User-Agent: DisocrdBot (" << valk::GITHUB_URL
+      << "User-Agent: DisocrdBot (" << valk::LIBNAME
         << ", " << valk::VERSION_STRING << ")\r\n"
       << "Accept: */*\r\n" 
       << "Accept-Encoding: gzip\r\n"
@@ -130,6 +145,11 @@ void io::RestClient::Request(const std::string& method,
   req.method = std::move(method);
   req.endpoint = std::move(endpoint);
   req.callback = std::move(callback);
+
+  if (globalRoute.isLimited()) {
+    globalRoute.addPending(std::move(req));
+    return;
+  }
   routes[route_str].addPending(std::move(req));
   bool limited = routes[route_str].isLimited();
   if (limited) return;
@@ -148,6 +168,23 @@ void io::RestClient::Request(const std::string& method,
           wait_time = (reset - now) * 1000;
         } else if (resp.headers.find("Retry-After") != resp.headers.end()) {
           wait_time = std::stol(resp.headers.at("Retry-After"), nullptr, 10);
+        }
+
+        if (data.find("global") != data.end()) {
+          std::string global = data["global"];
+          if (global == "true") {
+            globalRoute.setLimited(true);
+            service.spawn(wait_time, nullptr, [this](io::Timer *task) {
+              io::RestRequest request;
+              globalRoute.setLimited(false);
+              const std::size_t remaining = globalRoute.hasLeft();
+              for (std::size_t i = 0; i < remaining; i++) {
+                globalRoute.getPending(request);
+                Request(request.method, request.endpoint,
+                  request.data, request.callback);
+              }
+            });
+          }
         }
 
         routes[route].setLimited(true);

@@ -37,6 +37,7 @@ namespace io {
     Service& service;
     std::string token;
     HttpParser parser;
+    RestRoute globalRoute;
     std::deque<std::string> writes;
     std::vector<std::string> cookies;
     std::shared_ptr<SSLClient> client;
@@ -52,6 +53,13 @@ namespace io {
     void SetToken(const std::string &token);
     void Request(const std::string& method, const std::string &endpoint,
       const json &data = JSON_EMPTY, const RestCallback &cb = CB_NONE);
+
+    void get(const std::string& endpoint,
+      const json &data=JSON_EMPTY, const RestCallback &cb = CB_NONE);
+    void post(const std::string& endpoint,
+      const json &data=JSON_EMPTY, const RestCallback &cb = CB_NONE);
+    void del(const std::string& endpoint,
+      const json &data=JSON_EMPTY, const RestCallback &cb = CB_NONE);
   };
 
 }
